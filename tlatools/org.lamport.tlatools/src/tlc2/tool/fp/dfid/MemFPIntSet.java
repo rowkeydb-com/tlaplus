@@ -314,10 +314,7 @@ public class MemFPIntSet extends FPIntSet {
   final public void commitChkpt(String fname) throws IOException {
     File oldChkpt = new File(this.chkptName(fname, "chkpt"));
     File newChkpt = new File(this.chkptName(fname, "tmp"));
-    if ((oldChkpt.exists() && !oldChkpt.delete()) ||
-	!newChkpt.renameTo(oldChkpt)) {
-      throw new IOException("MemFPIntSet.commitChkpt: cannot delete " + oldChkpt);
-    }
+    util.FileUtil.replaceFile(newChkpt.getAbsolutePath(), oldChkpt.getAbsolutePath());
   }
   
   final public void commitChkpt() throws IOException {

@@ -165,28 +165,30 @@ public final class InternTable implements Serializable
     {
         File oldChkpt = new File(this.chkptName(filename, "chkpt"));
         File newChkpt = new File(this.chkptName(filename, "tmp"));
-        if ((oldChkpt.exists() && !oldChkpt.delete()) || !newChkpt.renameTo(oldChkpt))
-        {
-            throw new IOException("InternTable.commitChkpt: cannot delete " + oldChkpt);
-        }
+        util.FileUtil.replaceFile(newChkpt.getAbsolutePath(), oldChkpt.getAbsolutePath());
     }
 
     public synchronized void recover(String filename) throws IOException
     {
-        BufferedDataInputStream dis = new BufferedDataInputStream(this.chkptName(filename, "chkpt"));
-        tokenCnt = dis.readInt();
-        try
-        {
+        String chkptName = this.chkptName(filename, "chkpt");
+        BufferedDataInputStream dis = null;
+        try {
+            dis = new BufferedDataInputStream(chkptName);
+            tokenCnt = dis.readInt();
             while (!dis.atEOF())
             {
                 UniqueString var = UniqueString.read(dis);
                 this.put(var);
             }
-        } catch (EOFException e)
-        {
-            Assert.fail(EC.SYSTEM_CHECKPOINT_RECOVERY_CORRUPT, e.getMessage());
+        } catch (EOFException e) {
+            Assert.fail(EC.SYSTEM_CHECKPOINT_RECOVERY_CORRUPT, "Failed to unmarshal " + chkptName + ". " + e.getMessage());
+        } catch (IOException e) {
+            throw new IOException("Failed to unmarshal " + chkptName, e);
+        } finally {
+            if (dis != null) {
+                dis.close();
+            }
         }
-        dis.close();
     }
 
     private String chkptName(String filename, String ext)

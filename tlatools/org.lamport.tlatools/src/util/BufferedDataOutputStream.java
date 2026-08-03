@@ -46,13 +46,13 @@ public final class BufferedDataOutputStream extends FilterOutputStream implement
     /** Open this output stream on the underlying output stream
         <code>new FileOutputStream(name)</code>. */
     public BufferedDataOutputStream(String name) throws IOException {
-        this(new FileOutputStream(name));
+        this(new util.FileUtil.SyncingFileOutputStream(name));
     }
     
     /** Open this output stream on the underlying output stream
         <code>new FileOutputStream(file)</code>. */
     public BufferedDataOutputStream(File file) throws IOException {
-        this(new FileOutputStream(file));
+        this(new util.FileUtil.SyncingFileOutputStream(file));
     }
     
     private void initFields() {
@@ -73,12 +73,12 @@ public final class BufferedDataOutputStream extends FilterOutputStream implement
     
     /** Equivalent to <code>this.open(new FileOutputStream(name))</code>. */
     public void open(String name) throws IOException {
-        this.open(new FileOutputStream(name));
+        this.open(new util.FileUtil.SyncingFileOutputStream(name));
     }
 
     /** Equivalent to <code>this.open(new FileOutputStream(file))</code>. */
     public void open(File file) throws IOException {
-        this.open(new FileOutputStream(file));
+        this.open(new util.FileUtil.SyncingFileOutputStream(file));
     }
 
     /** Flush all bytes written to this stream to the underlying

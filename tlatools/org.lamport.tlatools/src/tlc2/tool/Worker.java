@@ -359,9 +359,7 @@ public final class Worker extends IdThread implements IWorker, INextStateFunctor
 	public final synchronized void commitChkpt() throws IOException {
 		final File oldChkpt = new File(filename + ".chkpt");
 		final File newChkpt = new File(filename + ".tmp");
-		if ((oldChkpt.exists() && !oldChkpt.delete()) || !newChkpt.renameTo(oldChkpt)) {
-			throw new IOException("Trace.commitChkpt: cannot delete " + oldChkpt);
-		}
+		util.FileUtil.replaceFile(newChkpt.getAbsolutePath(), oldChkpt.getAbsolutePath());
 	}
 
 	public final void recover() throws IOException {

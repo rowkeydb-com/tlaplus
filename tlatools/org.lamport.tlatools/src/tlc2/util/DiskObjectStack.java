@@ -104,11 +104,7 @@ public class DiskObjectStack extends ObjectStack {
     // String filename = this.filePrefix + ".chkpt"; 
     File oldChkpt = new File(this.filePrefix + ".chkpt");
     File newChkpt = new File(this.filePrefix + ".tmp");
-    if ((oldChkpt.exists() && !oldChkpt.delete()) ||
-	!newChkpt.renameTo(oldChkpt)) {
-      String msg = "DiskObjectStack.commitChkpt: cannot delete " + oldChkpt;
-      throw new IOException(msg);
-    }
+    util.FileUtil.replaceFile(newChkpt.getAbsolutePath(), oldChkpt.getAbsolutePath());
   }
 
   public final void recover() throws IOException {

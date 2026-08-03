@@ -102,9 +102,7 @@ public final class MemIntQueue extends MemBasedSet {
 		File oldChkpt = new File(oldName);
 		String newName = this.diskdir + FileUtil.separator + this.filename + ".tmp";
 		File newChkpt = new File(newName);
-		if ((oldChkpt.exists() && !oldChkpt.delete()) || !newChkpt.renameTo(oldChkpt)) {
-			throw new IOException("MemStateQueue.commitChkpt: cannot delete " + oldChkpt);
-		}
+		util.FileUtil.replaceFile(newChkpt.getAbsolutePath(), oldChkpt.getAbsolutePath());
 	}
 
 	public final void recover() throws IOException {

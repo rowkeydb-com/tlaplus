@@ -219,11 +219,7 @@ public final class MemFPSet2 extends FPSet {
   final public void commitChkpt(String fname) throws IOException {
     File oldChkpt = new File(this.chkptName(fname, "chkpt"));
     File newChkpt = new File(this.chkptName(fname, "tmp"));
-    if ((oldChkpt.exists() && !oldChkpt.delete()) ||
-	!newChkpt.renameTo(oldChkpt)) 
-    {
-      throw new IOException("MemFPSet2.commitChkpt: cannot delete " + oldChkpt);
-    }
+    util.FileUtil.replaceFile(newChkpt.getAbsolutePath(), oldChkpt.getAbsolutePath());
   }
     
   public final void recover(String fname) throws IOException {

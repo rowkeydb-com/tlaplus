@@ -22,7 +22,7 @@ public final class ValueOutputStream implements IValueOutputStream {
   }
 
   public ValueOutputStream(File file, final boolean compress) throws IOException {
-	  this(new FileOutputStream(file), compress);
+	  this(new util.FileUtil.SyncingFileOutputStream(file), compress);
   }
   
   public ValueOutputStream(final OutputStream out, final boolean compress) throws IOException {
@@ -42,7 +42,7 @@ public final class ValueOutputStream implements IValueOutputStream {
   
   public ValueOutputStream(String fname, boolean zip) throws IOException {
 	    if (zip) {
-	      OutputStream os = new GZIPOutputStream(new FileOutputStream(fname));
+	      OutputStream os = new GZIPOutputStream(new util.FileUtil.SyncingFileOutputStream(fname));
 	      this.dos = new BufferedDataOutputStream(os);
 	    }
 	    else {

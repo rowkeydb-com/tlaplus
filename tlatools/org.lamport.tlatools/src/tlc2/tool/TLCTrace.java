@@ -11,6 +11,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.EOFException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -467,6 +468,7 @@ public class TLCTrace {
 	/* Checkpoint. */
 	public synchronized void beginChkpt() throws IOException {
 		this.raf.flush();
+		this.raf.getFD().sync();
 		// SZ Feb 24, 2009: FileUtil introduced
 		DataOutputStream dos = FileUtil.newDFOS(filename + ".tmp");
 		dos.writeLong(this.raf.getFilePointer());
@@ -477,18 +479,23 @@ public class TLCTrace {
 	public void commitChkpt() throws IOException {
 		File oldChkpt = new File(filename + ".chkpt");
 		File newChkpt = new File(filename + ".tmp");
-		if ((oldChkpt.exists() && !oldChkpt.delete()) || !newChkpt.renameTo(oldChkpt)) {
-			throw new IOException("Trace.commitChkpt: cannot delete " + oldChkpt);
-		}
+		util.FileUtil.replaceFile(newChkpt.getAbsolutePath(), oldChkpt.getAbsolutePath());
 	}
 
 	public void recover() throws IOException {
-		// SZ Feb 24, 2009: FileUtil introduced
-		DataInputStream dis = FileUtil.newDFIS(filename + ".chkpt");
-		long filePos = dis.readLong();
-		this.lastPtr = dis.readLong();
-		dis.close();
-		this.raf.seek(filePos);
+		String chkptName = filename + ".chkpt";
+		try {
+			// SZ Feb 24, 2009: FileUtil introduced
+			DataInputStream dis = FileUtil.newDFIS(chkptName);
+			long filePos = dis.readLong();
+			this.lastPtr = dis.readLong();
+			dis.close();
+			this.raf.seek(filePos);
+		} catch (EOFException e) {
+			throw new IOException("Failed to unmarshal " + chkptName, e);
+		} catch (IOException e) {
+			throw new IOException("Failed to unmarshal " + chkptName, e);
+		}
 	}
 
 	@SuppressWarnings("unused")

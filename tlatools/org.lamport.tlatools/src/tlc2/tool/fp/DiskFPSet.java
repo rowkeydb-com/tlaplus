@@ -671,44 +671,46 @@ public abstract class DiskFPSet extends FPSet implements FPSetStatistic {
 	public void commitChkpt(String fname) throws IOException {
 		File oldChkpt = new File(this.getChkptName(fname, "chkpt"));
 		File newChkpt = new File(this.getChkptName(fname, "tmp"));
-		if (!newChkpt.renameTo(oldChkpt)) {
-			throw new IOException("DiskFPSet.commitChkpt: cannot delete "
-					+ oldChkpt);
-		}
+		util.FileUtil.replaceFile(newChkpt.getAbsolutePath(), oldChkpt.getAbsolutePath());
 	}
 
 	/* (non-Javadoc)
 	 * @see tlc2.tool.fp.FPSet#recover(java.lang.String)
 	 */
 	public void recover(String fname) throws IOException {
-		RandomAccessFile chkptRAF = new BufferedRandomAccessFile(
-				this.getChkptName(fname, "chkpt"), "r");
-		RandomAccessFile currRAF = new BufferedRandomAccessFile(
-				this.fpFilename, "rw");
-
-		this.fileCnt = chkptRAF.length() / LongSize;
-		int indexLen = (int) ((this.fileCnt - 1) / NumEntriesPerPage) + 2;
-		this.index = new long[indexLen];
-		this.currIndex = 0;
-		this.counter = 0;
-
-		long fp = 0L;
+		String chkptName = this.getChkptName(fname, "chkpt");
 		try {
-			long predecessor = Long.MIN_VALUE;
-			while (true) {
-				fp = chkptRAF.readLong();
-				this.writeFP(currRAF, fp);
-				// check invariant
-				Assert.check(predecessor < fp, EC.SYSTEM_INDEX_ERROR);
-				predecessor = fp;
+			RandomAccessFile chkptRAF = new BufferedRandomAccessFile(
+					chkptName, "r");
+			RandomAccessFile currRAF = new BufferedRandomAccessFile(
+					this.fpFilename, "rw");
+	
+			this.fileCnt = chkptRAF.length() / LongSize;
+			int indexLen = (int) ((this.fileCnt - 1) / NumEntriesPerPage) + 2;
+			this.index = new long[indexLen];
+			this.currIndex = 0;
+			this.counter = 0;
+	
+			long fp = 0L;
+			try {
+				long predecessor = Long.MIN_VALUE;
+				while (true) {
+					fp = chkptRAF.readLong();
+					this.writeFP(currRAF, fp);
+					// check invariant
+					Assert.check(predecessor < fp, EC.SYSTEM_INDEX_ERROR);
+					predecessor = fp;
+				}
+			} catch (EOFException e) {
+				Assert.check(this.currIndex == indexLen - 1, EC.SYSTEM_INDEX_ERROR);
+				this.index[indexLen - 1] = fp;
 			}
-		} catch (EOFException e) {
-			Assert.check(this.currIndex == indexLen - 1, EC.SYSTEM_INDEX_ERROR);
-			this.index[indexLen - 1] = fp;
+	
+			chkptRAF.close();
+			currRAF.close();
+		} catch (IOException e) {
+			throw new IOException("Failed to unmarshal " + chkptName, e);
 		}
-
-		chkptRAF.close();
-		currRAF.close();
 
 		// reopen a BufferedRAF for each thread
 		for (int i = 0; i < this.braf.length; i++) {

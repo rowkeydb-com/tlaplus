@@ -67,9 +67,7 @@ public final class MemObjectStack extends ObjectStack {
     File oldChkpt = new File(oldName);
     String newName = this.filename + ".tmp";
     File newChkpt = new File(newName);
-    if (!newChkpt.renameTo(oldChkpt)) {
-      throw new IOException("MemObjectStack.commitChkpt: cannot delete " + oldChkpt);
-    }
+    util.FileUtil.replaceFile(newChkpt.getAbsolutePath(), oldChkpt.getAbsolutePath());
   }
   
   public final void recover() throws IOException {

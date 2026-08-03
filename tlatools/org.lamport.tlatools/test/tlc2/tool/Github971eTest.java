@@ -6,19 +6,20 @@
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
- * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
- * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  *
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
@@ -31,9 +32,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
 import org.junit.Test;
-
 import tlc2.output.EC;
 import tlc2.tool.liveness.ModelCheckerTestCase;
 import tlc2.tool.queue.IStateQueue;
@@ -43,158 +42,131 @@ import tlc2.value.impl.StringValue;
 
 public class Github971eTest extends ModelCheckerTestCase {
 
-	public Github971eTest() {
-		super("Github971e", new String[] { "-config", "Github971d.cfg" }, EC.ExitStatus.VIOLATION_LIVENESS);
-	}
+  public Github971eTest() {
+    super("Github971e", new String[] {"-config", "Github971d.cfg"},
+          EC.ExitStatus.VIOLATION_LIVENESS);
+  }
 
-	@Override
-	protected boolean noGenerateSpec() {
-		return true;
-	}
+  @Override
+  protected boolean noGenerateSpec() {
+    return true;
+  }
 
-	@Override
-	protected boolean doCoverage() {
-		return false;
-	}
+  @Override
+  protected boolean doCoverage() {
+    return false;
+  }
 
-	@Override
-	protected boolean runWithDebugger() {
-		return false;
-	}
+  @Override
+  protected boolean runWithDebugger() {
+    return false;
+  }
 
-	@Override
-	protected boolean doDump() {
-		return false;
-	}
+  @Override
+  protected boolean doDump() {
+    return false;
+  }
 
-	@Override
-	protected boolean doDumpTrace() {
-		return false;
-	}
+  @Override
+  protected boolean doDumpTrace() {
+    return false;
+  }
 
-	@Test
-	public void testSpec() throws IOException {
-		assertTrue(recorder.recorded(EC.TLC_FINISHED));
+  @Test
+  public void testSpec() throws IOException {
+    assertTrue(recorder.recorded(EC.TLC_FINISHED));
 
-		assertTrue(recorder.recordedWithStringValues(EC.TLC_STATS, "17", "4", "0"));
+    assertTrue(recorder.recordedWithStringValues(EC.TLC_STATS, "17", "4", "0"));
 
-		// Assert it has found the temporal violation and also a counter example
-		assertTrue(recorder.recorded(EC.TLC_TEMPORAL_PROPERTY_VIOLATED));
-		assertTrue(recorder.recordedWithStringValue(EC.TLC_TEMPORAL_PROPERTY_VIOLATED, "LeadsTo"));
-		assertTrue(recorder.recorded(EC.TLC_COUNTER_EXAMPLE));
+    // Assert it has found the temporal violation and also a counter example
+    assertTrue(recorder.recorded(EC.TLC_TEMPORAL_PROPERTY_VIOLATED));
+    assertTrue(recorder.recordedWithStringValue(
+        EC.TLC_TEMPORAL_PROPERTY_VIOLATED, "LeadsTo"));
+    assertTrue(recorder.recorded(EC.TLC_COUNTER_EXAMPLE));
 
-		// Assert the error trace.
-		assertTrue(recorder.recorded(EC.TLC_STATE_PRINT2));
-		final List<String> expectedTrace = new ArrayList<String>(2);
-		expectedTrace.add("/\\ x = 0\n/\\ y = \"a\"");
-		expectedTrace.add("/\\ x = 1\n/\\ y = \"a\"");
-		expectedTrace.add("/\\ x = 0\n/\\ y = \"a\"");
-		expectedTrace.add("/\\ x = 1\n/\\ y = \"b\"");
-		expectedTrace.add("/\\ x = 1\n/\\ y = \"a\"");
-		expectedTrace.add("/\\ x = 1\n/\\ y = \"b\"");
-		assertTraceWith(recorder.getRecords(EC.TLC_STATE_PRINT2), expectedTrace);
-		assertBackToState(2);
-	}
+    // Assert the error trace.
+    assertTrue(recorder.recorded(EC.TLC_STATE_PRINT2));
+    final List<String> expectedTrace = new ArrayList<String>(2);
+    expectedTrace.add("/\\ x = 0\n/\\ y = \"a\"");
+    expectedTrace.add("/\\ x = 1\n/\\ y = \"a\"");
+    expectedTrace.add("/\\ x = 0\n/\\ y = \"a\"");
+    expectedTrace.add("/\\ x = 1\n/\\ y = \"b\"");
+    expectedTrace.add("/\\ x = 1\n/\\ y = \"a\"");
+    expectedTrace.add("/\\ x = 1\n/\\ y = \"b\"");
+    assertTraceWith(recorder.getRecords(EC.TLC_STATE_PRINT2), expectedTrace);
+    assertBackToState(2);
+  }
 
-	@Override
-	protected int getNumberOfThreads() {
-		// Has to be >1 to reproduce the race condition.
-		return 2;
-	}
+  @Override
+  protected int getNumberOfThreads() {
+    // Has to be >1 to reproduce the race condition.
+    return 2;
+  }
 
-	@Override
-	protected void beforeSetUp() {
-		try {
-			IStateQueue.Factory.sq = new IStateQueue() {
-				private final CountDownLatch signal = new CountDownLatch(4);
-				
-				private final IStateQueue inner = new MemStateQueue();
-				
-				public void sEnqueue(TLCState state) {
-					inner.sEnqueue(state);
-					
-					// block the worker that picked state (x=0/\y="a") and enqueues (x=0/\y="b")
-					if (IntValue.ValZero.equals(state.lookup("x"))
-							&& state.lookup("y").equals(new StringValue("b"))) {
-						try {
-							signal.await();
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
-				}
+  @Override
+  protected void beforeSetUp() {
+    try {
+      IStateQueue.Factory.sq = new IStateQueue() {
+        private final CountDownLatch signal = new CountDownLatch(4);
 
-				public TLCState sDequeue() {
-					signal.countDown();
-					return inner.sDequeue();
-				}
+        private final IStateQueue inner = new MemStateQueue();
 
-				public void enqueue(TLCState state) {
-					inner.enqueue(state);
-				}
+        public void sEnqueue(TLCState state) {
+          inner.sEnqueue(state);
 
-				public TLCState dequeue() {
-					return inner.dequeue();
-				}
+          // block the worker that picked state (x=0/\y="a") and enqueues
+          // (x=0/\y="b")
+          if (IntValue.ValZero.equals(state.lookup("x")) &&
+              state.lookup("y").equals(new StringValue("b"))) {
+            try {
+              signal.await();
+            } catch (InterruptedException e) {
+              e.printStackTrace();
+            }
+          }
+        }
 
-				public void sEnqueue(TLCState[] states) {
-					inner.sEnqueue(states);
-				}
+        public TLCState sDequeue() {
+          signal.countDown();
+          return inner.sDequeue();
+        }
 
-				public void sEnqueue(StateVec stateVec) {
-					inner.sEnqueue(stateVec);
-				}
+        public void enqueue(TLCState state) { inner.enqueue(state); }
 
-				public TLCState sPeek() {
-					return inner.sPeek();
-				}
+        public TLCState dequeue() { return inner.dequeue(); }
 
-				public TLCState[] sDequeue(int cnt) {
-					return inner.sDequeue(cnt);
-				}
+        public void sEnqueue(TLCState[] states) { inner.sEnqueue(states); }
 
-				public void finishAll() {
-					inner.finishAll();
-				}
+        public void sEnqueue(StateVec stateVec) { inner.sEnqueue(stateVec); }
 
-				public boolean suspendAll() {
-					return inner.suspendAll();
-				}
+        public TLCState sPeek() { return inner.sPeek(); }
 
-				public void resumeAll() {
-					inner.resumeAll();
-				}
+        public TLCState[] sDequeue(int cnt) { return inner.sDequeue(cnt); }
 
-				public void resumeAllStuck() {
-					inner.resumeAllStuck();
-				}
+        public void finishAll() { inner.finishAll(); }
 
-				public long size() {
-					return inner.size();
-				}
+        public boolean suspendAll() { return inner.suspendAll(); }
 
-				public void beginChkpt() throws IOException {
-					inner.beginChkpt();
-				}
+        public void resumeAll() { inner.resumeAll(); }
 
-				public void commitChkpt() throws IOException {
-					inner.commitChkpt();
-				}
+        public void resumeAllStuck() { inner.resumeAllStuck(); }
 
-				public void recover() throws IOException {
-					inner.recover();
-				}
+        public long size() { return inner.size(); }
 
-				public boolean isEmpty() {
-					return inner.isEmpty();
-				}
+        public void beginChkpt() throws IOException { inner.beginChkpt(); }
 
-				public void delete() throws IOException {
-					inner.delete();
-				}
-			};
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+        public void commitChkpt() throws IOException { inner.commitChkpt(); }
+
+        public void vacuum() throws IOException { inner.vacuum(); }
+
+        public void recover() throws IOException { inner.recover(); }
+
+        public boolean isEmpty() { return inner.isEmpty(); }
+
+        public void delete() throws IOException { inner.delete(); }
+      };
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
 }
